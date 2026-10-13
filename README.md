@@ -1,0 +1,80 @@
+# OpenAI Model Search for SillyTavern
+
+给 SillyTavern 的 **OpenAI Model 下拉**（`#model_openai_select`）补上丢失的**搜索框**。
+
+SillyTavern 自己就内置了 select2（自带搜索），并且已经给 OpenRouter / Aimlapi /
+ElectronHub / Chutes / NanoGPT 五个模型下拉挂上了——**唯独漏了 OpenAI 这一个**。
+本扩展只补上这一处，不改动任何核心文件。
+
+## 效果
+
+下拉展开后顶部出现搜索框，输入即过滤：
+
+![PC 搜索过滤](screenshots/PC-搜索过滤.png)
+
+| 展开态 | 手机端（保持原生） |
+|---|---|
+| ![PC 下拉展开](screenshots/PC-下拉展开.png) | ![手机搜索过滤](screenshots/手机-搜索过滤.png) |
+
+## 安装
+
+### 方式一：直接 clone（推荐，方便更新）
+
+```bash
+cd <SillyTavern>/public/scripts/extensions/third-party/
+git clone https://github.com/<你的账号>/st-openai-model-search.git
+```
+
+刷新酒馆页面即可。更新时：
+
+```bash
+cd <SillyTavern>/public/scripts/extensions/third-party/st-openai-model-search
+git pull
+```
+
+### 方式二：手动复制
+
+把本仓库的 `manifest.json` 和 `index.js` 放到：
+
+```
+<SillyTavern>/public/scripts/extensions/third-party/st-openai-model-search/
+```
+
+然后在酒馆「扩展」面板确认已启用（本地扩展默认启用）。
+
+## 使用
+
+- 打开 **API 连接**（插头图标）→ **Chat Completion** → 展开抽屉 → 点开「OpenAI Model」下拉
+- 直接打字过滤，例如 `gpt-6` 只剩 GPT-6 系模型
+- 选中后与原生下拉完全一致：设置照常保存、`change` 事件照常触发
+- 切换 API / 刷新模型列表后**自动重新接管**，无需刷新页面
+
+## 实现要点
+
+- **只补官方漏掉的一行**：复用官方 `openai.js` 对 OpenRouter 下拉完全相同的写法
+  （`searchInputPlaceholder` + 酒馆输入框样式类 `text_pole`）
+- **自包含兜底**：不假设宿主的 `select2-search-placeholder.js` 一定存在，
+  挂载时绑 `select2:open`，每次展开自行设置占位符与样式类（重复设置无副作用）
+- **幂等**：已挂载则跳过；元素未就绪时在 `APP_READY` 重试
+- **动态同步**：用 `MutationObserver` 监听 option 变化（含运行期动态追加的
+  External 分组），列表重建后自动 destroy + 重新挂载
+- **移动端保护**：触摸设备保持原生滚轮选择器，与官方对其它模型下拉的处理一致
+
+## 兼容性
+
+| 项目 | 说明 |
+|---|---|
+| SillyTavern | 基于 `release` 分支 `public/scripts/openai.js` 核对；`loading_order: 999` 保证在宿主初始化后执行 |
+| 依赖 | 复用酒馆已加载的 jQuery 与 select2 4.1.0-rc.0，不引入新依赖 |
+| 主题/配色 | 跟随酒馆 `select2-overrides.css`，与 OpenRouter 下拉观感一致 |
+| 移动端 | 无变化（设计如此，见下） |
+
+## 已知限制
+
+- **移动端无效果**：触摸设备保持原生选择器，不显示搜索框。
+  这是刻意与官方行为对齐，避免手机上弹出层与原生滚轮冲突。
+- 若你的主题对 `.select2-dropdown` 做了特殊覆盖，可能需要在主题侧一并调整。
+
+## 许可
+
+MIT
