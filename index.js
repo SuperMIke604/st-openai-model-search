@@ -25,8 +25,14 @@ const SELECT_SELECTOR = /** @type {const} */ ('#model_openai_select');
 /** select2 接管后会给原 select 加这个类，用于幂等判断 */
 const SELECT2_CLASS = /** @type {const} */ ('select2-hidden-accessible');
 
-/** 移动端保持原生滚轮选择器（与官方 openai.js 的 if (!isMobile()) 保持一致） */
-const ENABLE_ON_TOUCH = /** @type {const} */ (false);
+/**
+ * 触摸设备是否启用。
+ *
+ * 官方 openai.js 对这类下拉是 `if (!isMobile())` 才挂 select2（移动端保持原生滚轮）。
+ * 但模型列表越来越长，手机上翻找更痛苦，所以本扩展默认在移动端也启用搜索。
+ * 如需恢复官方行为（移动端保持原生滚轮选择器），把这里改成 false 即可。
+ */
+const ENABLE_ON_TOUCH = /** @type {const} */ (true);
 
 /** 搜索框占位符（中英双语，不依赖 i18n 词条是否存在） */
 const SEARCH_PLACEHOLDER = /** @type {const} */ ('搜索模型… (Search models...)');
