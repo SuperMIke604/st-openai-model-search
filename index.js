@@ -431,7 +431,14 @@ function renderPickerList($select, $list, keyword, config, pending) {
  * @param {JQuery} $trigger 触发按钮，提交后刷新其文本
  */
 function openPicker($select, config, $trigger) {
-    const current = new Set(Array.from($select.get(0).selectedOptions).map((o) => o.value));
+    // 空 value 是占位项（例如「-- World Info not found --」），不参与选择。
+    // 必须与 renderPickerList / triggerLabel 用同一套过滤，否则会出现
+    // 「确定 (1) 但点进去什么都没勾、提交值里混进一个空串」。
+    const current = new Set(
+        Array.from($select.get(0).selectedOptions)
+            .map((o) => o.value)
+            .filter((v) => v !== ''),
+    );
     const pending = new Set(current);
 
     const $dialog = $(`<dialog class="popup ${PICKER_CLASS}"></dialog>`);
@@ -489,7 +496,15 @@ function openPicker($select, config, $trigger) {
         syncConfirm();
     });
 
+    let closed = false;
+
     function close() {
+        if (closed) {
+            return;
+        }
+
+        closed = true;
+
         // 先关再移除，避免残留遮罩
         const dlg = /** @type {HTMLDialogElement} */ ($dialog.get(0));
 
@@ -497,8 +512,17 @@ function openPicker($select, config, $trigger) {
             dlg.close();
         }
 
+        if ($select.data('omsPicker') === $dialog) {
+            $select.removeData('omsPicker');
+        }
+
         $dialog.remove();
     }
+
+    // Esc / 程序化 close() 都会触发 dialog 的 close 事件。
+    // 只把关闭绑在按钮上的话，按 Esc 关掉的弹窗会永远留在 DOM 里（节点 + 事件句柄
+    // 随使用次数无限堆积），而且残留的那层还会成为「连开两次」的温床。
+    $dialog.on('close', close);
 
     $cancel.on('click', close);
 
@@ -507,6 +531,9 @@ function openPicker($select, config, $trigger) {
         $select.val(Array.from(pending)).trigger('change');
         close();
     });
+
+    // 记在 select 上，供「已开着就不要再开一层」的防重入检查使用
+    $select.data('omsPicker', $dialog);
 
     const dlg = /** @type {HTMLDialogElement} */ ($dialog.get(0));
 
@@ -560,11 +587,26 @@ function takeOverWithPicker($select, config) {
         }
     };
 
-    $trigger.on('click', () => openPicker($select, config, $trigger));
+    const open = () => {
+        // 防重入：若这个 select 的弹窗还开着，就不要再叠一层。
+        // 多层全屏 dialog 叠起来时，点「取消」只关最上面那层，得按好几次才退得出去。
+        const existing = $select.data('omsPicker');
+
+        if (existing && existing.get(0) && existing.get(0).open) {
+            return;
+        }
+
+        // 宿主（或其它脚本）可能没走 change 事件就改了值，打开前刷新一次显示，
+        // 避免按钮上显示 A、实际生效的是 B
+        sync();
+        openPicker($select, config, $trigger);
+    };
+
+    $trigger.on('click', open);
     $trigger.on('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            openPicker($select, config, $trigger);
+            open();
         }
     });
 
