@@ -1,10 +1,10 @@
 {
-  "display_name": "OpenAI Model Search (select2)",
+  "display_name": "OpenAI Model Search",
   "loading_order": 999,
   "js": "index.js",
-  "css": "",
+  "css": "style.css",
   "author": "Mike",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "requires": [],
   "dependencies": [],
   "auto_update": false
